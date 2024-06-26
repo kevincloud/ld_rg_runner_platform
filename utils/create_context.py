@@ -15,7 +15,7 @@ def create_user_context():
   metro = random.choice(['New York', 'Chicago', 'Minneapolis', 'Atlanta', 'Los Angeles', 'San Francisco', 'Denver', 'Boston'])
 
   def beta_chance():
-    if random.randint(1, 10) <= 2:
+    if random.randint(1, 10) <= 3:
       return True
     else:
       return False
