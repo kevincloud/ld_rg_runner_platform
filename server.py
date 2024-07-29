@@ -18,7 +18,8 @@ nolog = logging.getLogger("")
 nolog.setLevel(logging.INFO)
 nolog.addHandler(noophandler)
 
-loghandler = logging.FileHandler("rg_runner.log", mode="a")
+app_path = os.path.dirname(os.path.realpath(__file__))
+loghandler = logging.FileHandler(app_path + "/rg_runner.log", mode="a")
 loghandler.setFormatter(
     logging.Formatter(
         "{asctime} - {levelname} - {message}", style="{", datefmt="%Y-%m-%d %H:%M:%S"

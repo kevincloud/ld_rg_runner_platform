@@ -19,13 +19,13 @@ Type=simple
 Restart=always
 RestartSec=1
 User=root
-WorkingDirectory=/
-ExecStart=/usr/bin/python --host 0.0.0.0 --port 8080 --auth none /opt/dotnet/
+WorkingDirectory=/opt/ld_rg_runner_platform
+ExecStart=/usr/bin/python server.py
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
 # Start Code Server
-systemctl enable code-server
-systemctl start code-server
+systemctl enable rg-runner
+systemctl start rg-runner
