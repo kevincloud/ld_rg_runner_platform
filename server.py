@@ -29,6 +29,8 @@ logger = logging.getLogger("app_log")
 logger.setLevel(logging.INFO)
 logger.addHandler(loghandler)
 
+print("Logging to " + app_path + "/rg_runner.log")
+
 
 load_dotenv()
 
