@@ -84,12 +84,6 @@ def rg_runner(
 ):
     local_client = ldclient.client.LDClient(Config(sdk_key=sdk_key, stream=False))
     ddb_table = boto3.resource("dynamodb").Table(DDB_TABLE)
-    response = ddb_table.update_item(
-        Key={"ProjectKey": project_key},
-        UpdateExpression="set RGRunning = :r",
-        ExpressionAttributeValues={":r": True},
-        ReturnValues="UPDATED_NEW",
-    )
     for i in range(500):
         context = create_multi_context()
         flag_detail = local_client.variation_detail(
@@ -174,19 +168,9 @@ def detect_release_guardian():
         response = ddb_table.scan(
             Select="ALL_ATTRIBUTES", FilterExpression=Attr("UserId").ne("TDB")
         )
-        # context = create_multi_context()
         itemcount = len(response["Items"])
         for item in response["Items"]:
             rg_is_running = False
-            # client = ldclient.client.LDClient(
-            #     Config(sdk_key=item["SdkKey"], stream=False)
-            # )
-            # flag_detail = client.variation_detail(
-            #     FLAG_KEY,
-            #     context,
-            #     {"max_tokens": 4096, "modelId": "gpt-4o", "temperature": 1},
-            # )
-            # in_experiment = flag_detail.reason.get("inExperiment")
             in_experiment = flag_in_experiment(item["ProjectKey"], FLAG_KEY)
             if "RGRunning" in item.keys():
                 rg_is_running = bool(item["RGRunning"])
@@ -196,14 +180,21 @@ def detect_release_guardian():
                     "Release Guardian is not running for " + item["ProjectName"]
                 )
             if in_experiment and not rg_is_running:
-                logger.info("Is there: " + "RGRunning" in item)
-                logger.info(
-                    "Running Release Guardian for "
-                    + item["ProjectName"]
-                    + " ("
-                    + str(rg_is_running)
-                    + ")"
+                p_is_ready = False
+                logger.info("Running Release Guardian for " + item["ProjectName"])
+                putresp = ddb_table.update_item(
+                    Key={"ProjectKey": item["ProjectKey"]},
+                    UpdateExpression="set RGRunning = :r",
+                    ExpressionAttributeValues={":r": True},
+                    ReturnValues="UPDATED_NEW",
                 )
+                while not p_is_ready:
+                    response = ddb_table.get_item(
+                        Key={"ProjectKey": item["ProjectKey"]}
+                    )
+                    if "RGRunning" in response["Item"]:
+                        p_is_ready = bool(response["Item"]["RGRunning"])
+                    time.sleep(1)
                 p = Process(
                     target=rg_runner,
                     args=(
@@ -220,7 +211,6 @@ def detect_release_guardian():
                 )
                 p.daemon = True
                 p.start()
-            # client.close()
 
         logger.info("Scanned " + str(itemcount) + " projects")
         logger.info("Sleeping for 5 seconds")
