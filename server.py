@@ -174,6 +174,7 @@ def detect_release_guardian():
                 p = Process(
                     target=rg_runner,
                     args=(
+                        item["ProjectKey"],
                         item["SdkKey"],
                         FLAG_KEY,
                         BINARY_METRIC_1,
