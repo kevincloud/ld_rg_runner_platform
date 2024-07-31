@@ -151,15 +151,15 @@ def flag_in_experiment(project_key, flag_key):
     headers = {
         "Content-Type": "application/json",
         "Authorization": API_KEY,
-        "LD-API-Version": "beta",
     }
 
     response = requests.get(url, headers=headers)
     data = json.loads(response.text)
-    rg_data = data["environments"]["production"]["fallthrough"]
-    if "rollout" in rg_data:
-        if rg_data["rollout"]["experimentAllocation"]["type"] == "measuredRollout":
-            return True
+    logger.info("data: " + data)
+    # rg_data = data["environments"]["production"]["fallthrough"]
+    # if "rollout" in rg_data:
+    #     if rg_data["rollout"]["experimentAllocation"]["type"] == "measuredRollout":
+    #         return True
 
     return False
 
