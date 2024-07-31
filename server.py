@@ -163,7 +163,7 @@ def detect_release_guardian():
             )
             in_experiment = flag_detail.reason.get("inExperiment")
             if "RGRunning" in item:
-                rg_is_running = item["RGRunning"]
+                rg_is_running = bool(item["RGRunning"])
 
             if in_experiment is None:
                 logger.debug(
