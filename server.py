@@ -8,6 +8,7 @@ import boto3
 import os
 import random
 import signal
+import requests
 from boto3.dynamodb.conditions import Attr
 from utils.create_context import create_multi_context
 from multiprocessing import Process
@@ -35,6 +36,7 @@ print("Logging to " + app_path + "/rg_runner.log")
 load_dotenv()
 
 
+API_KEY = os.environ.get("API_KEY")
 DDB_TABLE = "coastdemo-demo-tracker"
 FLAG_KEY = os.environ.get("RG_FLAG_KEY")
 NUMERIC_METRIC_1 = os.environ.get("NUMERIC_METRIC_1")
@@ -143,6 +145,25 @@ def rg_runner(
     local_client.close()
 
 
+def flag_in_experiment(project_key, flag_key):
+    url = "https://app.launchdarkly.com/api/v2/flags/" + project_key + "/" + flag_key
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": API_KEY,
+        "LD-API-Version": "beta",
+    }
+
+    response = requests.get(url, headers=headers)
+    data = json.loads(response.text)
+    rg_data = data["environments"]["production"]["fallthrough"]
+    if "rollout" in rg_data:
+        if rg_data["rollout"]["experimentAllocation"]["type"] == "measuredRollout":
+            return True
+
+    return False
+
+
 def detect_release_guardian():
     global shut_me_down
     while not shut_me_down:
@@ -151,19 +172,20 @@ def detect_release_guardian():
         response = ddb_table.scan(
             Select="ALL_ATTRIBUTES", FilterExpression=Attr("UserId").ne("TDB")
         )
-        context = create_multi_context()
+        # context = create_multi_context()
         itemcount = len(response["Items"])
         for item in response["Items"]:
             rg_is_running = False
-            client = ldclient.client.LDClient(
-                Config(sdk_key=item["SdkKey"], stream=False)
-            )
-            flag_detail = client.variation_detail(
-                FLAG_KEY,
-                context,
-                {"max_tokens": 4096, "modelId": "gpt-4o", "temperature": 1},
-            )
-            in_experiment = flag_detail.reason.get("inExperiment")
+            # client = ldclient.client.LDClient(
+            #     Config(sdk_key=item["SdkKey"], stream=False)
+            # )
+            # flag_detail = client.variation_detail(
+            #     FLAG_KEY,
+            #     context,
+            #     {"max_tokens": 4096, "modelId": "gpt-4o", "temperature": 1},
+            # )
+            # in_experiment = flag_detail.reason.get("inExperiment")
+            in_experiment = flag_in_experiment(item["ProjectKey"], FLAG_KEY)
             if "RGRunning" in item.keys():
                 rg_is_running = bool(item["RGRunning"])
 
@@ -196,7 +218,7 @@ def detect_release_guardian():
                 )
                 p.daemon = True
                 p.start()
-            client.close()
+            # client.close()
 
         logger.info("Scanned " + str(itemcount) + " projects")
         logger.info("Sleeping for 5 seconds")
