@@ -170,7 +170,13 @@ def detect_release_guardian():
                     "Release Guardian is not running for " + item["ProjectName"]
                 )
             if in_experiment and not rg_is_running:
-                logger.info("Running Release Guardian for " + item["ProjectName"])
+                logger.info(
+                    "Running Release Guardian for "
+                    + item["ProjectName"]
+                    + " ("
+                    + str(rg_is_running)
+                    + ")"
+                )
                 p = Process(
                     target=rg_runner,
                     args=(
