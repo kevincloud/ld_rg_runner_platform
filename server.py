@@ -70,6 +70,7 @@ def error_chance(chance_number):
 
 
 def rg_runner(
+    project_key,
     sdk_key,
     flag_key,
     binary_metric_1,
@@ -80,6 +81,13 @@ def rg_runner(
     numeric_metric_1_true_range,
 ):
     local_client = ldclient.client.LDClient(Config(sdk_key=sdk_key, stream=False))
+    ddb_table = boto3.resource("dynamodb").Table(DDB_TABLE)
+    response = ddb_table.update_item(
+        Key={"ProjectKey": project_key},
+        UpdateExpression="set RGRunning = :r",
+        ExpressionAttributeValues={":r": True},
+        ReturnValues="UPDATED_NEW",
+    )
     for i in range(500):
         context = create_multi_context()
         flag_detail = local_client.variation_detail(
@@ -123,6 +131,12 @@ def rg_runner(
                 logger.debug(
                     f"Tracking {numeric_metric_1} with value {numeric_metric_value}"
                 )
+    response = ddb_table.update_item(
+        Key={"ProjectKey": project_key},
+        UpdateExpression="set RGRunning = :r",
+        ExpressionAttributeValues={":r": False},
+        ReturnValues="UPDATED_NEW",
+    )
     logger.debug(context)
     local_client.flush()
     time.sleep(1)
@@ -138,6 +152,7 @@ def detect_release_guardian():
         context = create_multi_context()
         itemcount = len(response["Items"])
         for item in response["Items"]:
+            rg_is_running = False
             client = ldclient.client.LDClient(
                 Config(sdk_key=item["SdkKey"], stream=False)
             )
@@ -147,12 +162,14 @@ def detect_release_guardian():
                 {"max_tokens": 4096, "modelId": "gpt-4o", "temperature": 1},
             )
             in_experiment = flag_detail.reason.get("inExperiment")
+            if "RGRunning" in item:
+                rg_is_running = item["RGRunning"]
 
             if in_experiment is None:
                 logger.debug(
                     "Release Guardian is not running for " + item["ProjectName"]
                 )
-            if in_experiment:
+            if in_experiment and not rg_is_running:
                 logger.info("Running Release Guardian for " + item["ProjectName"])
                 p = Process(
                     target=rg_runner,
