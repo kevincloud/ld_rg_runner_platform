@@ -192,6 +192,7 @@ def detect_release_guardian():
                     response = ddb_table.get_item(
                         Key={"ProjectKey": item["ProjectKey"]}
                     )
+                    logger.info(response["Item"])
                     if "RGRunning" in response["Item"]:
                         p_is_ready = bool(response["Item"]["RGRunning"])
                     time.sleep(1)
