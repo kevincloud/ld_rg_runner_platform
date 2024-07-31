@@ -155,11 +155,13 @@ def flag_in_experiment(project_key, flag_key):
 
     response = requests.get(url, headers=headers)
     data = json.loads(response.text)
-    logger.info(data)
-    # rg_data = data["environments"]["production"]["fallthrough"]
-    # if "rollout" in rg_data:
-    #     if rg_data["rollout"]["experimentAllocation"]["type"] == "measuredRollout":
-    #         return True
+    if "environments" not in data:
+        logger.error("Error in " + project_key + ": " + response.text)
+        return False
+    rg_data = data["environments"]["production"]["fallthrough"]
+    if "rollout" in rg_data:
+        if rg_data["rollout"]["experimentAllocation"]["type"] == "measuredRollout":
+            return True
 
     return False
 
