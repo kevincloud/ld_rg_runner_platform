@@ -148,7 +148,9 @@ def detect_release_guardian():
     while not shut_me_down:
         logger.info("Scanning all projects...")
         ddb_table = boto3.resource("dynamodb").Table(DDB_TABLE)
-        response = ddb_table.scan(FilterExpression=Attr("UserId").ne("TDB"))
+        response = ddb_table.scan(
+            Select="ALL_ATTRIBUTES", FilterExpression=Attr("UserId").ne("TDB")
+        )
         context = create_multi_context()
         itemcount = len(response["Items"])
         for item in response["Items"]:
@@ -162,7 +164,7 @@ def detect_release_guardian():
                 {"max_tokens": 4096, "modelId": "gpt-4o", "temperature": 1},
             )
             in_experiment = flag_detail.reason.get("inExperiment")
-            if "RGRunning" in item:
+            if "RGRunning" in item.keys():
                 rg_is_running = bool(item["RGRunning"])
 
             if in_experiment is None:
