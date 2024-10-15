@@ -1,0 +1,5 @@
+aws_region        = "us-east-2"
+unique_identifier = "coastrg"
+app_name          = "rg-runner"
+ld_api_key        = "api-XXXX"
+owner             = "your-name@launchdarkly.com"

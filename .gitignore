@@ -3,3 +3,15 @@ venv
 __pycache__
 .env
 *.log
+
+*.tfstate*
+*.tfvars
+.terraform
+*.lock.hcl
+
+lambda/app/**
+!lambda/app/lambda_rgrunner.zip
+!lambda/app/handler.py
+!lambda/app/requirements.txt
+
+.DS_Store
