@@ -12,6 +12,7 @@ __pycache__
 lambda/app/**
 !lambda/app/lambda_rgrunner.zip
 !lambda/app/handler.py
+!lambda/app/utils
 !lambda/app/utils/create_context.py
 !lambda/app/requirements.txt
 
