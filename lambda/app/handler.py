@@ -195,6 +195,12 @@ def lambda_handler(event, context):
                     "statusCode": 200,
                     "body": '{"message": "Not actionable...exiting."}',
                 }
+        else:
+            print("Not actionable...exiting.")
+            return {
+                "statusCode": 200,
+                "body": '{"message": "Not actionable...exiting."}',
+            }
 
         show_banner()
         metrics = get_metrics(project_key, env_key, flag_key)
