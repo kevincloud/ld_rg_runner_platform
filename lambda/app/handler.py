@@ -182,7 +182,9 @@ def lambda_handler(event, context):
 
         ldclient.set_config(Config(sdk_key))
 
-        if current_action == "updateRules":
+        actionable = ["updateRules", "updateOn"]
+
+        if current_action in actionable:
             x_context = create_multi_context()
             x_flag_detail = ldclient.get().variation_detail(
                 flag_key, x_context, {"no_data_found": True}
