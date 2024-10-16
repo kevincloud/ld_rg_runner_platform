@@ -246,7 +246,7 @@ def lambda_handler(event, context):
                             )
                 else:
                     for metric in metrics:
-                        if not metric["isNumeric"]:
+                        if metric["isNumeric"]:
                             numeric_metric_value = random.randint(
                                 int(NUMERIC_METRIC_1_TRUE_RANGE[0]),
                                 int(NUMERIC_METRIC_1_TRUE_RANGE[1]),
