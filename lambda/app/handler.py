@@ -165,30 +165,44 @@ def lambda_handler(event, context):
         print("Environment Key: " + env_key)
         print("Flag Key: " + flag_key)
 
-        actionable = [
-            "updateFallthroughWithMeasuredRollout",
-            "updateRulesWithMeasuredRollout",
-        ]
+        # actionable = [
+        #     "updateFallthroughWithMeasuredRollout",
+        #     "updateRulesWithMeasuredRollout",
+        #     "updateRules",
+        # ]
 
-        if current_action not in actionable:
-            print("Not actionable...exiting.")
-            return {
-                "statusCode": 200,
-                "body": '{"message": "Not actionable...exiting."}',
-            }
+        # if current_action not in actionable:
+        #     print("Not actionable...exiting.")
+        #     return {
+        #         "statusCode": 200,
+        #         "body": '{"message": "Not actionable...exiting."}',
+        #     }
 
         sdk_key = get_sdk_key(project_key, env_key)
 
         ldclient.set_config(Config(sdk_key))
 
+        if current_action == "updateRules":
+            x_context = create_multi_context()
+            x_flag_detail = ldclient.get().variation_detail(
+                flag_key, x_context, {"no_data_found": True}
+            )
+
+            in_experiment = x_flag_detail.reason.get("inExperiment")
+            if in_experiment is None:
+                print("Not actionable...exiting.")
+                return {
+                    "statusCode": 200,
+                    "body": '{"message": "Not actionable...exiting."}',
+                }
+
         show_banner()
         metrics = get_metrics(project_key, env_key, flag_key)
 
-        time.sleep(5)
+        time.sleep(10)
 
         for i in range(500):
             flag_context = create_multi_context()
-            print(flag_context)
             flag_detail = ldclient.get().variation_detail(
                 flag_key,
                 flag_context,
@@ -266,9 +280,7 @@ def lambda_handler(event, context):
                             )
             if i % 20 == 0:
                 ldclient.get().flush()
-                time.sleep(0.1)
-            else:
-                time.sleep(0.05)
+            time.sleep(0.05)
 
         ldclient.get().flush()
         time.sleep(1)
