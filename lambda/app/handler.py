@@ -67,6 +67,32 @@ def get_resource_names(resource):
     return project_key, env_key, flag_key
 
 
+def in_experiment(project_key, env_key, flag_key):
+    url = (
+        "https://app.launchdarkly.com/api/v2/projects/"
+        + project_key
+        + "/flags/"
+        + flag_key
+        + "/measured-rollouts?filter=environmentKey:"
+        + env_key
+    )
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": LD_API_KEY,
+        "LD-API-Version": "beta",
+    }
+
+    response = requests.get(
+        url,
+        headers=headers,
+    )
+    data = json.loads(response.text)
+    if len(data["items"]) > 0:
+        return True
+    else:
+        return False
+
+
 """
 Get the SDK key from the LaunchDarkly API
 """
@@ -147,6 +173,27 @@ def error_chance(chance_number):
         return False
 
 
+def get_control_value(project_key, env_key, flag_key):
+    url = (
+        "https://app.launchdarkly.com/api/v2/projects/"
+        + project_key
+        + "/flags/"
+        + flag_key
+        + "/measured-rollouts?filter=environmentKey:"
+        + env_key
+    )
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": LD_API_KEY,
+        "LD-API-Version": "beta",
+    }
+    response = requests.get(url, headers=headers)
+    data = json.loads(response.text)
+    item = data["items"][0]
+    control_value = item["design"]["controlVariationValue"]
+    return control_value
+
+
 def lambda_handler(event, context):
     global LD_API_KEY
     global logs
@@ -165,50 +212,42 @@ def lambda_handler(event, context):
         print("Environment Key: " + env_key)
         print("Flag Key: " + flag_key)
 
-        # actionable = [
-        #     "updateFallthroughWithMeasuredRollout",
-        #     "updateRulesWithMeasuredRollout",
-        #     "updateRules",
-        # ]
+        actionable = [
+            "updateRules",
+            "updateOn",
+            "updateFallthroughWithMeasuredRollout",
+            "updateRulesWithMeasuredRollout",
+            "updateFallthrough"
+        ]
 
-        # if current_action not in actionable:
-        #     print("Not actionable...exiting.")
-        #     return {
-        #         "statusCode": 200,
-        #         "body": '{"message": "Not actionable...exiting."}',
-        #     }
-
-        sdk_key = get_sdk_key(project_key, env_key)
-
-        ldclient.set_config(Config(sdk_key))
-
-        actionable = ["updateRules", "updateOn"]
-
-        if current_action in actionable:
-            x_context = create_multi_context()
-            x_flag_detail = ldclient.get().variation_detail(
-                flag_key, x_context, {"no_data_found": True}
-            )
-
-            in_experiment = x_flag_detail.reason.get("inExperiment")
-            if in_experiment is None:
-                print("Not actionable...exiting.")
-                return {
-                    "statusCode": 200,
-                    "body": '{"message": "Not actionable...exiting."}',
-                }
-        else:
+        if not current_action in actionable:
             print("Not actionable...exiting.")
             return {
                 "statusCode": 200,
                 "body": '{"message": "Not actionable...exiting."}',
             }
 
+        if not in_experiment(project_key, env_key, flag_key):
+            print("Not actionable...exiting.")
+            return {
+                "statusCode": 200,
+                "body": '{"message": "Not actionable...exiting."}',
+            }
+
+        # actionable = [
+        #     "updateRules",
+        # ]
+
+        sdk_key = get_sdk_key(project_key, env_key)
+
+        ldclient.set_config(Config(sdk_key))
+
         show_banner()
         metrics = get_metrics(project_key, env_key, flag_key)
 
         time.sleep(10)
 
+        control_value = get_control_value(project_key, env_key, flag_key)
         for i in range(500):
             flag_context = create_multi_context()
             flag_detail = ldclient.get().variation_detail(
@@ -216,10 +255,10 @@ def lambda_handler(event, context):
                 flag_context,
                 {"no_data_found": True},
             )
-            index = flag_detail.variation_index
+            # index = flag_detail.variation_index
             flag_variation = flag_detail.value
 
-            if index == 0:
+            if flag_variation == control_value:
                 print("Serving control")
                 if error_chance(int(BINARY_METRIC_1_FALSE_CONVERTED)):
                     for metric in metrics:
